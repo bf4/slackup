@@ -45,6 +45,8 @@ This gem is does the bare basics of backup and works for me.
 
 It has no tests.
 
+It depends on the ['slack-api' gem](https://github.com/aki017/slack-ruby-gem)
+
 ## Contributing
 
 1. Fork it ( https://github.com/[my-github-username]/slackup/fork )
