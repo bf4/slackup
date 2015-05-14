@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby --disable-gems
+require_relative "../lib/slackup"
+Slackup.backup
