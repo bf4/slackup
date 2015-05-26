@@ -42,18 +42,18 @@ class Slackup
   def execute
     SEMAPHORE.synchronize do
       authorize! &&
-      Dir.chdir(name) do
-        channels.each do |channel|
-          write_channel_messages(channel)
-        end
-        write_stars
-        write_users
-        Dir.chdir(ims_dir) do
-          im_list.each do |im|
-            write_im_messages(im)
+        Dir.chdir(name) do
+          channels.each do |channel|
+            write_channel_messages(channel)
+          end
+          write_stars
+          write_users
+          Dir.chdir(ims_dir) do
+            im_list.each do |im|
+              write_im_messages(im)
+            end
           end
         end
-      end
     end
   end
 
@@ -75,14 +75,23 @@ class Slackup
 
   User = Struct.new(:user_hash) do
     def id; user_hash["id"]; end
+
     def name; user_hash["name"]; end
+
     def deleted; user_hash["deleted"]; end
+
     def color; user_hash["color"]; end
+
     def profile; user_hash["profile"]; end
+
     def admin?; user_hash["is_admin"]; end
+
     def owner?; user_hash["is_owner"]; end
+
     def has_2fa?; user_hash["has_2fa"]; end
+
     def has_files?; user_hash["has_files"]; end
+
     def to_hash; user_hash; end
   end
   # {
@@ -114,7 +123,7 @@ class Slackup
   #   ]
   # }
   def users
-    @users ||= Slack.users_list["members"].map {|member| User.new(member) }
+    @users ||= Slack.users_list["members"].map { |member| User.new(member) }
   end
 
   def channels
@@ -123,6 +132,7 @@ class Slackup
 
   Im = Struct.new(:im_hash) do
     def id; im_hash["id"]; end
+
     def user; im_hash["user"]; end
   end
   # @return [Hash]
@@ -134,7 +144,7 @@ class Slackup
   #   ]
   # }
   def im_list
-    @im_list ||= Slack.im_list["ims"].map {|im| Im.new(im) }
+    @im_list ||= Slack.im_list["ims"].map { |im| Im.new(im) }
   end
 
   # @param im_id [String] is the 'channel' of the im, e.g. "D1234567890"
@@ -157,8 +167,8 @@ class Slackup
   end
 
   def write_channel_messages(channel)
-    messages = Slack.channels_history({channel: channel["id"], count: "1000"})["messages"]
-    File.open(backup_filename(channel['name']),"w")  do |f|
+    messages = Slack.channels_history(channel: channel["id"], count: "1000")["messages"]
+    File.open(backup_filename(channel["name"]), "w")  do |f|
       formatted_messages = format_channel_messages(messages)
       f.write serialize(formatted_messages)
     end
@@ -166,7 +176,7 @@ class Slackup
 
   def format_messages(messages)
     messages.reverse.map { |msg|
-      if (msg.has_key?("text") && msg.has_key?("user"))
+      if msg.has_key?("text") && msg.has_key?("user")
         msg["user"] = user_name(msg["user"])
         msg
       else
@@ -189,14 +199,14 @@ class Slackup
   end
 
   def write_stars
-    File.open(backup_filename("stars"),"w")  do |f|
+    File.open(backup_filename("stars"), "w")  do |f|
       stars = Slack.stars_list(count: "1000", page: "1")
       f.write(serialize(stars))
     end
   end
 
   def write_users
-    File.open(backup_filename("users"),"w")  do |f|
+    File.open(backup_filename("users"), "w")  do |f|
       f.write(serialize(users.map(&:to_hash)))
     end
   end
@@ -207,10 +217,10 @@ class Slackup
 
   def write_im_messages(im)
     messages = im_history(im.id)["messages"]
-    im_username = user_name(im.user).downcase.gsub(/\s+/,"-")
+    im_username = user_name(im.user).downcase.gsub(/\s+/, "-")
     formatted_messages = format_im_messages(messages)
     return if formatted_messages.empty?
-    File.open(backup_filename(im_username),"w")  do |f|
+    File.open(backup_filename(im_username), "w")  do |f|
       f.write serialize(formatted_messages)
     end
   end
