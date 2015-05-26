@@ -47,6 +47,12 @@ class Slackup
           write_channel_messages(channel)
         end
         write_stars
+        write_users
+        Dir.chdir(ims_dir) do
+          im_list.each do |im|
+            write_im_messages(im)
+          end
+        end
       end
     end
   end
@@ -67,45 +73,152 @@ class Slackup
     end
   end
 
+  User = Struct.new(:user_hash) do
+    def id; user_hash["id"]; end
+    def name; user_hash["name"]; end
+    def deleted; user_hash["deleted"]; end
+    def color; user_hash["color"]; end
+    def profile; user_hash["profile"]; end
+    def admin?; user_hash["is_admin"]; end
+    def owner?; user_hash["is_owner"]; end
+    def has_2fa?; user_hash["has_2fa"]; end
+    def has_files?; user_hash["has_files"]; end
+    def to_hash; user_hash; end
+  end
+  # {
+  #   "ok": true,
+  #   "members": [
+  #     {
+  #       "id": "U023BECGF",
+  #       "name": "bobby",
+  #       "deleted": false,
+  #       "color": "9f69e7",
+  #       "profile": {
+  #         "first_name": "Bobby",
+  #         "last_name": "Tables",
+  #         "real_name": "Bobby Tables",
+  #         "email": "bobby@slack.com",
+  #         "skype": "my-skype-name",
+  #         "phone": "+1 (123) 456 7890",
+  #         "image_24": "https:\/\/...",
+  #         "image_32": "https:\/\/...",
+  #         "image_48": "https:\/\/...",
+  #         "image_72": "https:\/\/...",
+  #         "image_192": "https:\/\/..."
+  #       },
+  #       "is_admin": true,
+  #       "is_owner": true,
+  #       "has_2fa": false,
+  #       "has_files": true
+  #     },
+  #   ]
+  # }
   def users
-    @users ||= Slack.users_list["members"]
+    @users ||= Slack.users_list["members"].map {|member| User.new(member) }
   end
 
   def channels
     @channels ||= Slack.channels_list["channels"]
   end
 
+  Im = Struct.new(:im_hash) do
+    def id; im_hash["id"]; end
+    def user; im_hash["user"]; end
+  end
+  # @return [Hash]
+  # @example
+  # {
+  #   "ok"=>true,
+  #   "ims"=>[
+  #     {"id"=>"D1234567890", "is_im"=>true, "user"=>"USLACKBOT", "created"=>1372105335, "is_user_deleted"=>false},
+  #   ]
+  # }
+  def im_list
+    @im_list ||= Slack.im_list["ims"].map {|im| Im.new(im) }
+  end
+
+  # @param im_id [String] is the 'channel' of the im, e.g. "D1234567890"
+  # @return [Hash]
+  # @example return
+  # {
+  #   "ok": true,
+  #   "latest": "1358547726.000003",
+  #   "messages": [
+  #     {
+  #       "type": "message",
+  #       "ts": "1358546515.000008",
+  #       "user": "U2147483896",
+  #       "text": "Hello"
+  #     },
+  #     ]
+  #   "has_more": false
+  def im_history(im_id)
+    Slack.im_history(channel: im_id)
+  end
+
   def write_channel_messages(channel)
     messages = Slack.channels_history({channel: channel["id"], count: "1000"})["messages"]
     File.open(backup_filename(channel['name']),"w")  do |f|
-      f.write format_channel_messages(messages)
+      formatted_messages = format_channel_messages(messages)
+      f.write serialize(formatted_messages)
     end
   end
 
-  def format_channel_messages(messages)
+  def format_messages(messages)
     messages.reverse.map { |msg|
       if (msg.has_key?("text") && msg.has_key?("user"))
-        users.each do |user|
-          if user["id"] == msg["user"]
-            break msg["user"] = user["name"]
-          end
-        end
+        msg["user"] = user_name(msg["user"])
         msg
       else
         nil
       end
-    }.compact.to_yaml
+    }.compact
+  end
+
+  alias_method :format_channel_messages, :format_messages
+  alias_method :format_im_messages, :format_messages
+
+  # gets user name for an id, if mapping is known, else returns the input
+  def user_name(user_id)
+    @user_names ||= users.each_with_object({}) {|user, lookup|
+      lookup[user.id] = user.name
+    }
+    @user_names.fetch(user_id) {
+      user_id
+    }
   end
 
   def write_stars
     File.open(backup_filename("stars"),"w")  do |f|
       stars = Slack.stars_list(count: "1000", page: "1")
-      f.write(format_stars(stars))
+      f.write(serialize(stars))
     end
   end
 
-  def format_stars(stars)
-    stars.to_yaml
+  def write_users
+    File.open(backup_filename("users"),"w")  do |f|
+      f.write(serialize(users.map(&:to_hash)))
+    end
+  end
+
+  def serialize(obj)
+    obj.to_yaml
+  end
+
+  def write_im_messages(im)
+    messages = im_history(im.id)["messages"]
+    im_username = user_name(im.user).downcase.gsub(/\s+/,"-")
+    formatted_messages = format_im_messages(messages)
+    return if formatted_messages.empty?
+    File.open(backup_filename(im_username),"w")  do |f|
+      f.write serialize(formatted_messages)
+    end
+  end
+
+  def ims_dir
+    @ims_dir ||= "ims"
+    FileUtils.mkdir_p(@ims_dir)
+    @ims_dir
   end
 
   def backup_filename(name)
