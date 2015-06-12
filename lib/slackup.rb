@@ -158,7 +158,7 @@ class Slackup
   #       "type": "message",
   #       "ts": "1358546515.000008",
   #       "user": "U2147483896",
-  #       "text": "Hello"
+  #       "text": "<@U0453RHGQ> has some thoughts on that kind of stuff"
   #     },
   #     ]
   #   "has_more": false
@@ -178,6 +178,10 @@ class Slackup
     messages.reverse.map { |msg|
       if msg.has_key?("text") && msg.has_key?("user")
         msg["user"] = user_name(msg["user"])
+        msg["text"].gsub!(/<@(?<userid>U[A-Z0-9]+)>/) {
+          userid = $~[:userid] # MatchData
+          "<@#{user_name(userid)}>"
+        }
         msg
       else
         nil
