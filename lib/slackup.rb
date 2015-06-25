@@ -3,7 +3,7 @@
 require "pathname"
 require "yaml"
 require "fileutils"
-gem "slack-api", "= 1.1.3"
+gem "slack-api", "~> 1.1", ">= 1.1.3"
 require "slack"
 
 class Slackup
