@@ -47,6 +47,17 @@ It has no tests.
 
 It depends on the ['slack-api' gem](https://github.com/aki017/slack-ruby-gem)
 
+I run it periodically via `bash update.bash`
+
+```bash
+#!/usr/bin/env bash -l
+bundle check || bundle --quiet
+git commit -am "Update before update.bash"
+bundle exec slackup &&
+  git commit -am "Update via update.bash" &&
+    git add . && git commit -am "Add new via update.bash"
+```
+
 ## Contributing
 
 1. Fork it ( https://github.com/[my-github-username]/slackup/fork )
