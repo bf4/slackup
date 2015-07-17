@@ -46,6 +46,11 @@ class Slackup
           channels.each do |channel|
             write_channel_messages(channel)
           end
+          Dir.chdir(groups_dir) do
+            groups.each do |group|
+              write_group_messages(group)
+            end
+          end
           write_stars
           write_users
           Dir.chdir(ims_dir) do
@@ -130,6 +135,35 @@ class Slackup
     @channels ||= Slack.channels_list["channels"]
   end
 
+  # {
+  #     "ok": true,
+  #     "groups": [
+  #         {
+  #             "id": "G0ABC",
+  #             "name": "some-group",
+  #             "is_group": true,
+  #             "created": 1436923155,
+  #             "creator": "UABC",
+  #             "is_archived": false,
+  #             "members": [
+  #             ],
+  #             "topic": {
+  #                 "value": "",
+  #                 "creator": "",
+  #                 "last_set": 0
+  #             },
+  #             "purpose": {
+  #                 "value": "Some group",
+  #                 "creator": "UABC",
+  #                 "last_set": 1437105751
+  #             }
+  #         }
+  #     ]
+  # }
+  def groups
+    @groups ||= Slack.groups_list["groups"]
+  end
+
   Im = Struct.new(:im_hash) do
     def id; im_hash["id"]; end
 
@@ -174,6 +208,15 @@ class Slackup
     end
   end
 
+  # https://api.slack.com/methods/groups.history
+  def write_group_messages(group)
+    messages = Slack.groups_history(channel: group["id"], count: "1000")["messages"]
+    File.open(backup_filename(group["name"]), "w")  do |f|
+      formatted_messages = format_group_messages(messages)
+      f.write serialize(formatted_messages)
+    end
+  end
+
   def format_messages(messages)
     messages.reverse.map { |msg|
       if msg.has_key?("text") && msg.has_key?("user")
@@ -190,6 +233,7 @@ class Slackup
   end
 
   alias_method :format_channel_messages, :format_messages
+  alias_method :format_group_messages, :format_messages
   alias_method :format_im_messages, :format_messages
 
   # gets user name for an id, if mapping is known, else returns the input
@@ -233,6 +277,12 @@ class Slackup
     @ims_dir ||= "ims"
     FileUtils.mkdir_p(@ims_dir)
     @ims_dir
+  end
+
+  def groups_dir
+    @groups_dir ||= "groups"
+    FileUtils.mkdir_p(@groups_dir)
+    @groups_dir
   end
 
   def backup_filename(name)
