@@ -201,19 +201,33 @@ class Slackup
   end
 
   def write_channel_messages(channel)
-    messages = Slack.channels_history(channel: channel["id"], count: "1000")["messages"]
-    File.open(backup_filename(channel["name"]), "w")  do |f|
-      formatted_messages = format_channel_messages(messages)
-      f.write serialize(formatted_messages)
+    with_messages channel["name_normalized"], Slack.channels_history(channel: channel["id"], count: "1000") do |messages|
+      File.open(backup_filename(channel["name"]), "w")  do |f|
+        formatted_messages = format_channel_messages(messages)
+        f.write serialize(formatted_messages)
+      end
     end
   end
 
   # https://api.slack.com/methods/groups.history
   def write_group_messages(group)
-    messages = Slack.groups_history(channel: group["id"], count: "1000")["messages"]
-    File.open(backup_filename(group["name"]), "w")  do |f|
-      formatted_messages = format_group_messages(messages)
-      f.write serialize(formatted_messages)
+    with_messages group, Slack.groups_history(channel: group["id"], count: "1000") do |messages|
+      File.open(backup_filename(group["name"]), "w")  do |f|
+        formatted_messages = format_group_messages(messages)
+        f.write serialize(formatted_messages)
+      end
+    end
+  end
+
+  # {"ok"=>false, "error"=>"ratelimited"}
+  # {"ok"=>false, "error"=>"token_revoked"
+  def with_messages(name, query_result)
+    if query_result["ok"]
+      yield query_result["messages"]
+    else
+      error = query_result["error"]
+      $stderr.puts "#{name}, error: #{error}"
+      exit 1 if error =~ /ratelimited/
     end
   end
 
@@ -264,12 +278,12 @@ class Slackup
   end
 
   def write_im_messages(im)
-    messages = im_history(im.id)["messages"]
     im_username = user_name(im.user).downcase.gsub(/\s+/, "-")
-    formatted_messages = format_im_messages(messages)
-    return if formatted_messages.empty?
-    File.open(backup_filename(im_username), "w")  do |f|
-      f.write serialize(formatted_messages)
+    with_messages im_username, im_history(im.id) do |messages|
+      formatted_messages = format_im_messages(messages)
+      File.open(backup_filename(im_username), "w")  do |f|
+        f.write serialize(formatted_messages)
+      end unless formatted_messages.empty?
     end
   end
 
