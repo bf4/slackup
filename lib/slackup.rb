@@ -65,6 +65,9 @@ class Slackup
     authorize! && write!
   end
 
+  # TODO: Paginate
+  # TODO: Skip already downloaded
+  # TODO: Update records rather than overwrite
   def write!
     Dir.chdir(dirname) do
       Channels.new(config, client).write!
