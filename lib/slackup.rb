@@ -20,6 +20,7 @@ class Slackup
 
   SEMAPHORE = Mutex.new
   attr_reader :name
+  alias dirname name
   def initialize(name, token)
     @name = name
     @token = token
@@ -46,14 +47,17 @@ class Slackup
 
   def execute
     SEMAPHORE.synchronize do
-      authorize! &&
-        Dir.chdir(name) do
-          Channels.new(name, @token).write!
-          Groups.new(name, @token).write!
-          Stars.new(name, @token).write!
-          user_client.write!
-          Ims.new(name, @token).write!
-        end
+      authorize! && write!
+    end
+  end
+
+  def write!
+    Dir.chdir(dirname) do
+      Channels.new(name, @token).write!
+      Groups.new(name, @token).write!
+      Stars.new(name, @token).write!
+      user_client.write!
+      Ims.new(name, @token).write!
     end
   end
 
