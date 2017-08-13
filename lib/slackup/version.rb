@@ -1,3 +1,3 @@
-module Slackup
-  VERSION = "0.0.6"
+class Slackup
+  VERSION = "0.0.7"
 end
