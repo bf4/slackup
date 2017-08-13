@@ -17,9 +17,21 @@ class Slackup::Ims < Slackup
   end
   alias ims list
 
+  def write_ims?
+    if config.fetch("ims", true)
+      p [name, :ims, "Writing"]
+      true
+    else
+      p [name, :ims, "Skipping"]
+      false
+    end
+  end
+
   def write!
+    return unless write_ims?
     Dir.chdir(ims_dir) do
       ims.each do |im|
+        # p [:ims, im.user, format_username(im.user)]
         write_messages(im)
       end
     end

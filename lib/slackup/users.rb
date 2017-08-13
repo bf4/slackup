@@ -53,7 +53,18 @@ class Slackup::Users < Slackup
   end
   alias users list
 
+  def write_users?
+    if config.fetch("users", true)
+      p [name, :users, "Writing"]
+      true
+    else
+      p [name, :users, "Skipping"]
+      false
+    end
+  end
+
   def write!
+    return unless write_users?
     File.open(backup_filename("users"), "w")  do |f|
       f.write(serialize(users.map(&:to_hash)))
     end

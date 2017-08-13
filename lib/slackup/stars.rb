@@ -5,7 +5,18 @@ class Slackup::Stars < Slackup
   end
   alias stars list
 
+  def write_stars?
+    if config.fetch("stars", true)
+      p [name, :stars, "Writing"]
+      true
+    else
+      p [name, :stars, "Skipping"]
+      false
+    end
+  end
+
   def write!
+    return unless write_stars?
     with_messages "stars", list do |messages|
       File.open(backup_filename("stars"), "w")  do |f|
         f.write(serialize(messages))

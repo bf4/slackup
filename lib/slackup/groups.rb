@@ -30,9 +30,28 @@ class Slackup::Groups < Slackup
   end
   alias groups list
 
+  def configured_groups
+    @configured_groups ||= config.fetch("groups", [])
+  end
+
+  def write_group?(group)
+    whitelisted_group = group["name"] if configured_groups.empty?
+    whitelisted_group ||= @configured_groups.find do |group_name|
+      group["name"] == group_name
+    end
+    if whitelisted_group
+      p [name, :groups, "Writing #{whitelisted_group}"]
+      true
+    else
+      p [name, :groups, "Skipping #{group["name"]}"]
+      false
+    end
+  end
+
   def write!
     Dir.chdir(groups_dir) do
       groups.each do |group|
+        next unless write_group?(group)
         write_messages(group)
       end
     end

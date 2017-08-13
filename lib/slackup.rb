@@ -46,10 +46,7 @@ class Slackup
   def self.backup(team_config = team_config())
     team_config.each do |config|
       fork do
-        name = config.fetch("nickname") { config.fetch("name") }
-        token = config.fetch("token")
-        client = configure_client(token)
-        new(name, client).execute
+        new(config).execute
       end
     end
     p Process.waitall
@@ -57,9 +54,10 @@ class Slackup
 
   attr_reader :name, :client
   alias dirname name
-  def initialize(name, client)
-    @name = name
-    @client = client
+  def initialize(config, client=nil)
+    @config = config
+    @name = config.fetch("nickname") { config.fetch("name") }
+    @client = client || configure_client
     FileUtils.mkdir_p(name)
   end
 
@@ -69,13 +67,22 @@ class Slackup
 
   def write!
     Dir.chdir(dirname) do
-      Channels.new(name, client).write!
-      Groups.new(name, client).write!
-      Stars.new(name, client).write!
+      Channels.new(config, client).write!
+      Groups.new(config, client).write!
+      Stars.new(config, client).write!
       user_client.write!
-      Ims.new(name, client).write!
+      Ims.new(config, client).write!
     end
   end
+
+  def configure_client
+    token = config.fetch("token")
+    self.class.configure_client(token)
+  end
+
+  protected
+
+  attr_reader :config
 
   private
 
@@ -122,7 +129,7 @@ class Slackup
   end
 
   def user_client
-    @user_client ||= Users.new(name, client)
+    @user_client ||= Users.new(config, client)
   end
 
   def users
