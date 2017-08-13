@@ -6,6 +6,7 @@ require "fileutils"
 gem "slack-api", "~> 1.1", ">= 1.1.3"
 require "slack"
 require_relative 'slackup/channels'
+require_relative 'slackup/groups'
 
 class Slackup
   Error = Class.new(StandardError)
@@ -45,11 +46,7 @@ class Slackup
       authorize! &&
         Dir.chdir(name) do
           Channels.new(name, @token).write!
-          Dir.chdir(groups_dir) do
-            groups.each do |group|
-              write_group_messages(group)
-            end
-          end
+          Groups.new(name, @token).write!
           write_stars
           write_users
           Dir.chdir(ims_dir) do
@@ -130,36 +127,6 @@ class Slackup
     @users ||= Slack.users_list["members"].map { |member| User.new(member) }
   end
 
-
-  # {
-  #     "ok": true,
-  #     "groups": [
-  #         {
-  #             "id": "G0ABC",
-  #             "name": "some-group",
-  #             "is_group": true,
-  #             "created": 1436923155,
-  #             "creator": "UABC",
-  #             "is_archived": false,
-  #             "members": [
-  #             ],
-  #             "topic": {
-  #                 "value": "",
-  #                 "creator": "",
-  #                 "last_set": 0
-  #             },
-  #             "purpose": {
-  #                 "value": "Some group",
-  #                 "creator": "UABC",
-  #                 "last_set": 1437105751
-  #             }
-  #         }
-  #     ]
-  # }
-  def groups
-    @groups ||= Slack.groups_list["groups"]
-  end
-
   Im = Struct.new(:im_hash) do
     def id; im_hash["id"]; end
 
@@ -196,16 +163,6 @@ class Slackup
     Slack.im_history(channel: im_id)
   end
 
-  # https://api.slack.com/methods/groups.history
-  def write_group_messages(group)
-    with_messages group, Slack.groups_history(channel: group["id"], count: "1000") do |messages|
-      File.open(backup_filename(group["name"]), "w")  do |f|
-        formatted_messages = format_group_messages(messages)
-        f.write serialize(formatted_messages)
-      end
-    end
-  end
-
   # {"ok"=>false, "error"=>"ratelimited"}
   # {"ok"=>false, "error"=>"token_revoked"
   def with_messages(name, query_result)
@@ -237,8 +194,6 @@ class Slackup
     }.compact
   end
 
-  alias_method :format_channel_messages, :format_messages
-  alias_method :format_group_messages, :format_messages
   alias_method :format_im_messages, :format_messages
 
   # gets user name for an id, if mapping is known, else returns the input
@@ -282,12 +237,6 @@ class Slackup
     @ims_dir ||= "ims"
     FileUtils.mkdir_p(@ims_dir)
     @ims_dir
-  end
-
-  def groups_dir
-    @groups_dir ||= "groups"
-    FileUtils.mkdir_p(@groups_dir)
-    @groups_dir
   end
 
   def backup_filename(name)
