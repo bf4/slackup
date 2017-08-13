@@ -8,6 +8,7 @@ require "slack"
 require_relative 'slackup/channels'
 require_relative 'slackup/groups'
 require_relative 'slackup/ims'
+require_relative 'slackup/stars'
 
 class Slackup
   Error = Class.new(StandardError)
@@ -48,7 +49,7 @@ class Slackup
         Dir.chdir(name) do
           Channels.new(name, @token).write!
           Groups.new(name, @token).write!
-          write_stars
+          Stars.new(name, @token).write!
           write_users
           Ims.new(name, @token).write!
         end
@@ -164,13 +165,6 @@ class Slackup
     @user_names.fetch(user_id) {
       user_id
     }
-  end
-
-  def write_stars
-    File.open(backup_filename("stars"), "w")  do |f|
-      stars = Slack.stars_list(count: "1000", page: "1")
-      f.write(serialize(stars))
-    end
   end
 
   def write_users
