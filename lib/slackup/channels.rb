@@ -5,8 +5,28 @@ class Slackup::Channels < Slackup
   end
   alias channels list
 
+  def configured_channels
+    @configured_channels ||= config.fetch("channels", [])
+  end
+
+  def write_channel?(channel)
+    whitelisted_channel = channel["name"] if configured_channels.empty?
+    whitelisted_channel ||= configured_channels.find do |channel_name|
+      channel["name_normalized"] == channel_name or
+        channel["name"] == channel_name
+    end
+    if whitelisted_channel
+      p [name, :channels, "Writing #{whitelisted_channel}"]
+      true
+    else
+      p [name, :channels, "Skipping #{channel["name"]}"]
+      false
+    end
+  end
+
   def write!
     channels.each do |channel|
+      next unless write_channel?(channel)
       write_messages(channel)
     end
   end

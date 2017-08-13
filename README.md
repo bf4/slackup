@@ -20,6 +20,11 @@ where each team config is a dictionary (hash) as below:
 | name (required) | the team name. e.g. `some-team` in `some-team.slackup.com`. Is used as backup directory name for the team.
 | nickname (optional) | a nickname. When present, overrides `name` as the backup directory name for the team.
 | token (required) | https://api.slack.com/custom-integrations/legacy-tokens
+| channels (optional) | array of whitelisted channels to include. Default is to include all
+| groups (optional) | array of whitelisted groups to include. Default is to include all
+| users (optional) | boolean whether to write out users
+| stars (optional) | boolean whether to write out stars
+| ims (optional) | boolean whether to write out ims
 
 e.g.
 
@@ -32,6 +37,14 @@ slack_teams.yml
 - name: another-team
   nickname: ateam
   token: xxxp-different-token
+  channels:
+    - general
+    # - random
+  groups:
+    - core-maintainers
+  users: true
+  stars: false
+  ims: true
 ```
 
 slack_teams.json
