@@ -7,6 +7,7 @@ gem "slack-api", "~> 1.1", ">= 1.1.3"
 require "slack"
 require_relative 'slackup/channels'
 require_relative 'slackup/groups'
+require_relative 'slackup/ims'
 
 class Slackup
   Error = Class.new(StandardError)
@@ -49,11 +50,7 @@ class Slackup
           Groups.new(name, @token).write!
           write_stars
           write_users
-          Dir.chdir(ims_dir) do
-            im_list.each do |im|
-              write_im_messages(im)
-            end
-          end
+          Ims.new(name, @token).write!
         end
     end
   end
@@ -127,41 +124,6 @@ class Slackup
     @users ||= Slack.users_list["members"].map { |member| User.new(member) }
   end
 
-  Im = Struct.new(:im_hash) do
-    def id; im_hash["id"]; end
-
-    def user; im_hash["user"]; end
-  end
-  # @return [Hash]
-  # @example
-  # {
-  #   "ok"=>true,
-  #   "ims"=>[
-  #     {"id"=>"D1234567890", "is_im"=>true, "user"=>"USLACKBOT", "created"=>1372105335, "is_user_deleted"=>false},
-  #   ]
-  # }
-  def im_list
-    @im_list ||= Slack.im_list["ims"].map { |im| Im.new(im) }
-  end
-
-  # @param im_id [String] is the 'channel' of the im, e.g. "D1234567890"
-  # @return [Hash]
-  # @example return
-  # {
-  #   "ok": true,
-  #   "latest": "1358547726.000003",
-  #   "messages": [
-  #     {
-  #       "type": "message",
-  #       "ts": "1358546515.000008",
-  #       "user": "U2147483896",
-  #       "text": "<@U0453RHGQ> has some thoughts on that kind of stuff"
-  #     },
-  #     ]
-  #   "has_more": false
-  def im_history(im_id)
-    Slack.im_history(channel: im_id)
-  end
 
   # {"ok"=>false, "error"=>"ratelimited"}
   # {"ok"=>false, "error"=>"token_revoked"
@@ -194,8 +156,6 @@ class Slackup
     }.compact
   end
 
-  alias_method :format_im_messages, :format_messages
-
   # gets user name for an id, if mapping is known, else returns the input
   def user_name(user_id)
     @user_names ||= users.each_with_object({}) {|user, lookup|
@@ -221,22 +181,6 @@ class Slackup
 
   def serialize(obj)
     obj.to_yaml
-  end
-
-  def write_im_messages(im)
-    im_username = user_name(im.user).downcase.gsub(/\s+/, "-")
-    with_messages im_username, im_history(im.id) do |messages|
-      formatted_messages = format_im_messages(messages)
-      File.open(backup_filename(im_username), "w")  do |f|
-        f.write serialize(formatted_messages)
-      end unless formatted_messages.empty?
-    end
-  end
-
-  def ims_dir
-    @ims_dir ||= "ims"
-    FileUtils.mkdir_p(@ims_dir)
-    @ims_dir
   end
 
   def backup_filename(name)
