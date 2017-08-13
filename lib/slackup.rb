@@ -5,13 +5,13 @@ require "yaml"
 require "fileutils"
 gem "slack-api", "~> 1.6", ">= 1.6.0"
 require "slack"
-require_relative 'slackup/users'
-require_relative 'slackup/channels'
-require_relative 'slackup/groups'
-require_relative 'slackup/ims'
-require_relative 'slackup/stars'
-
 class Slackup
+  require_relative 'slackup/users'
+  require_relative 'slackup/channels'
+  require_relative 'slackup/groups'
+  require_relative 'slackup/ims'
+  require_relative 'slackup/stars'
+
   Error = Class.new(StandardError)
   RUN_ROOT  = Pathname Dir.pwd
   def self.run_root
