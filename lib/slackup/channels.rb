@@ -1,7 +1,7 @@
 class Slackup::Channels < Slackup
 
   def list
-    @list ||= Slack.channels_list["channels"]
+    @list ||= client.channels_list["channels"]
   end
   alias channels list
 
@@ -12,7 +12,7 @@ class Slackup::Channels < Slackup
   end
 
   def messages(channel)
-    Slack.channels_history(channel: channel["id"], count: "1000")
+    client.channels_history(channel: channel["id"], count: "1000")
   end
 
   def write_messages(channel)

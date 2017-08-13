@@ -26,7 +26,7 @@ class Slackup::Groups < Slackup
   #     ]
   # }
   def list
-    @list ||= Slack.groups_list["groups"]
+    @list ||= client.groups_list["groups"]
   end
   alias groups list
 
@@ -39,7 +39,7 @@ class Slackup::Groups < Slackup
   end
 
   def messages(group)
-    Slack.groups_history(channel: group["id"], count: "1000")
+    client.groups_history(channel: group["id"], count: "1000")
   end
 
   # https://api.slack.com/methods/groups.history

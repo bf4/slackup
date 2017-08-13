@@ -1,7 +1,7 @@
 class Slackup::Stars < Slackup
 
   def list
-    Slack.stars_list(count: "1000", page: "1")
+    client.stars_list(count: "1000", page: "1")
   end
   alias stars list
 

@@ -19,13 +19,6 @@ class Slackup
   end
 
   SEMAPHORE = Mutex.new
-  attr_reader :name
-  alias dirname name
-  def initialize(name, token)
-    @name = name
-    @token = token
-    FileUtils.mkdir_p(name)
-  end
 
   def self.team_token_pairs_file
     Pathname.glob(run_root.join("slack_teams.{json,yml,yaml}")).first
@@ -39,35 +32,50 @@ class Slackup
     end
   end
 
+  def self.configure_client(token)
+    client = nil
+    SEMAPHORE.synchronize do
+      Slack.configure do |config|
+        config.token = token
+      end
+      client = Slack.client
+    end
+    client
+  end
+
   def self.backup(team_token_pairs = team_token_pairs())
     team_token_pairs.each do |name, token|
-      new(name, token).execute
+      client = configure_client(token)
+      new(name, client).execute
     end
   end
 
+  attr_reader :name, :client
+  alias dirname name
+  def initialize(name, client)
+    @name = name
+    @client = client
+    FileUtils.mkdir_p(name)
+  end
+
   def execute
-    SEMAPHORE.synchronize do
-      authorize! && write!
-    end
+    authorize! && write!
   end
 
   def write!
     Dir.chdir(dirname) do
-      Channels.new(name, @token).write!
-      Groups.new(name, @token).write!
-      Stars.new(name, @token).write!
+      Channels.new(name, client).write!
+      Groups.new(name, client).write!
+      Stars.new(name, client).write!
       user_client.write!
-      Ims.new(name, @token).write!
+      Ims.new(name, client).write!
     end
   end
 
   private
 
   def authorize!
-    Slack.configure do |config|
-      config.token = @token
-    end
-    auth_test = Slack.auth_test
+    auth_test = client.auth_test
     if auth_test["ok"] === true
       p [name]
       true
@@ -76,7 +84,6 @@ class Slackup
       false
     end
   end
-
 
   # {"ok"=>false, "error"=>"ratelimited"}
   # {"ok"=>false, "error"=>"token_revoked"
@@ -110,7 +117,7 @@ class Slackup
   end
 
   def user_client
-    @user_client ||= Users.new(name, @token)
+    @user_client ||= Users.new(name, client)
   end
 
   def users

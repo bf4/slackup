@@ -13,7 +13,7 @@ class Slackup::Ims < Slackup
   #   ]
   # }
   def list
-    @list ||= Slack.im_list["ims"].map { |im| Im.new(im) }
+    @list ||= client.im_list["ims"].map { |im| Im.new(im) }
   end
   alias ims list
 
@@ -41,7 +41,7 @@ class Slackup::Ims < Slackup
   #     ]
   #   "has_more": false
   def messages(im_id)
-    Slack.im_history(channel: im_id)
+    client.im_history(channel: im_id)
   end
 
   def write_messages(im)

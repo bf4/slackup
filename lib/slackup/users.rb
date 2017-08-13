@@ -49,7 +49,7 @@ class Slackup::Users < Slackup
   #   ]
   # }
   def list
-    @list ||= Slack.users_list["members"].map { |member| User.new(member) }
+    @list ||= client.users_list["members"].map { |member| User.new(member) }
   end
   alias users list
 
