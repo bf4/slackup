@@ -5,6 +5,7 @@ require "yaml"
 require "fileutils"
 gem "slack-api", "~> 1.1", ">= 1.1.3"
 require "slack"
+require_relative 'slackup/channels'
 
 class Slackup
   Error = Class.new(StandardError)
@@ -43,9 +44,7 @@ class Slackup
     SEMAPHORE.synchronize do
       authorize! &&
         Dir.chdir(name) do
-          channels.each do |channel|
-            write_channel_messages(channel)
-          end
+          Channels.new(name, @token).write!
           Dir.chdir(groups_dir) do
             groups.each do |group|
               write_group_messages(group)
@@ -131,9 +130,6 @@ class Slackup
     @users ||= Slack.users_list["members"].map { |member| User.new(member) }
   end
 
-  def channels
-    @channels ||= Slack.channels_list["channels"]
-  end
 
   # {
   #     "ok": true,
@@ -198,15 +194,6 @@ class Slackup
   #   "has_more": false
   def im_history(im_id)
     Slack.im_history(channel: im_id)
-  end
-
-  def write_channel_messages(channel)
-    with_messages channel["name_normalized"], Slack.channels_history(channel: channel["id"], count: "1000") do |messages|
-      File.open(backup_filename(channel["name"]), "w")  do |f|
-        formatted_messages = format_channel_messages(messages)
-        f.write serialize(formatted_messages)
-      end
-    end
   end
 
   # https://api.slack.com/methods/groups.history
