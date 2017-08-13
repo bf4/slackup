@@ -232,6 +232,10 @@ class Slackup
   end
 
   def format_messages(messages)
+    if messages.nil?
+      $stderr.puts "Messages nil #{caller[0..1]}"
+      return []
+    end
     messages.reverse.map { |msg|
       if msg.has_key?("text") && msg.has_key?("user")
         msg["user"] = user_name(msg["user"])
