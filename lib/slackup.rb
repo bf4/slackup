@@ -45,9 +45,12 @@ class Slackup
 
   def self.backup(team_token_pairs = team_token_pairs())
     team_token_pairs.each do |name, token|
-      client = configure_client(token)
-      new(name, client).execute
+      fork do
+        client = configure_client(token)
+        new(name, client).execute
+      end
     end
+    p Process.waitall
   end
 
   attr_reader :name, :client
