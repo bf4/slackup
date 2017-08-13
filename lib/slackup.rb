@@ -20,15 +20,15 @@ class Slackup
 
   SEMAPHORE = Mutex.new
 
-  def self.team_token_pairs_file
+  def self.team_config_file
     Pathname.glob(run_root.join("slack_teams.{json,yml,yaml}")).first
   end
 
-  def self.team_token_pairs
-    if team_token_pairs_file.readable?
-      YAML.load(team_token_pairs_file.read)
+  def self.team_config
+    if team_config_file.readable?
+      YAML.load(team_config_file.read)
     else
-      fail Error, "No team token pairs file found. See README for instructions."
+      fail Error, "No team config file found. See README for instructions."
     end
   end
 
@@ -43,9 +43,11 @@ class Slackup
     client
   end
 
-  def self.backup(team_token_pairs = team_token_pairs())
-    team_token_pairs.each do |name, token|
+  def self.backup(team_config = team_config())
+    team_config.each do |config|
       fork do
+        name = config.fetch("nickname") { config.fetch("name") }
+        token = config.fetch("token")
         client = configure_client(token)
         new(name, client).execute
       end
