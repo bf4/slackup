@@ -12,8 +12,14 @@ backup my slacks
 2. Configure a file in the backup directory called `slack_teams.yml`,
 though `slack_teams.yaml` and `slack_teams.json` will also work.
 
-The config file must contain a dictionary (hash) of 
-team names (backup directories) and associated tokens.
+The config file must contain an array (list) of team configurations,
+where each team config is a dictionary (hash) as below:
+
+| config | description |
+|--------|-------|
+| name (required) | the team name. e.g. `some-team` in `some-team.slackup.com`. Is used as backup directory name for the team.
+| nickname (optional) | a nickname. When present, overrides `name` as the backup directory name for the team.
+| token (required) | https://api.slack.com/custom-integrations/legacy-tokens
 
 e.g.
 
@@ -21,23 +27,30 @@ slack_teams.yml
 
 ```yaml
 ---
-some-team: xxxp-some-token
-another-team: xxxp-different-token
+- name: some-team
+  token: xxxp-some-token
+- name: another-team
+  nickname: ateam
+  token: xxxp-different-token
 ```
 
 slack_teams.json
 
 ```json
-{
-  "some-team": "xxxp-some-token",
-  "another-team": "xxxp-different-token"
-}
+[
+  {
+    "name": "some-time",
+    "token": "xxxp-some-token"
+  },
+  {
+    "name": "another-team",
+    "nickname": "ateam",
+    "token": "xxxp-different-token"
+  }
+]
 ```
 
 3. Run `slackup` in your terminal
-
-Each key/value team pair will be run in a local directory named by the key
-using only the token for auth. Thus, the key (team) name can be whatever you want.
 
 ## Development
 
