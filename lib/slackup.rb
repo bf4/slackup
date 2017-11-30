@@ -99,9 +99,14 @@ class Slackup
 
   # {"ok"=>false, "error"=>"ratelimited"}
   # {"ok"=>false, "error"=>"token_revoked"
-  def with_messages(name, query_result)
+  def with_messages(name, query_result, key: 'messages')
     if query_result["ok"]
-      yield query_result["messages"]
+      messages = query_result[key]
+      if messages.nil?
+        messages = [] # always return a collection
+        p [:no_messages_for_key, name, key, query_result.keys]
+      end
+      yield messages
     else
       error = query_result["error"]
       $stderr.puts "#{name}, error: #{error}"
